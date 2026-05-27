@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ポケモン タイプ推測ゲーム (改良版)</title>
+    <style>
+        :root {
+            --primary-color: #3f51b5;
+            --bg-color: #f5f7fa;
+            --card-bg: #ffffff;
+            --text-color: #333333;
+        }
+
+        body {
+            font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', Meiryo, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .container {
+            max-width: 800px;
+            width: 100%;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        h1 {
+            margin: 0 0 10px 0;
+            font-size: 24px;
+            color: var(--primary-color);
+        }
+
+        .rules {
+            font-size: 14px;
+            background-color: #eef2f7;
+            padding: 12px;
+            border-radius: 8px;
+            line-height: 1.5;
+            margin-bottom: 20px;
+        }
+
+        .game-layout {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+        }
+
+        @media (min-width: 768px) {
+            .game-layout {
+                grid-template-columns: 1.2fr 0.8fr;
+            }
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            margin-bottom: 20px;
+        }
+
+        .card h2 {
+            font-size: 18px;
+            margin-top: 0;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #f0f0f0;
+            padding-bottom: 8px;
+        }
+
+        /* モード選択フォーム */
+        .settings-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .settings-row select {
+            padding: 8px 12px;
+            border-radius: 6px;
+            border: 1px solid #ccc;
+            font-size: 14px;
+            font-weight: bold;
+            background-color: #fff;
+            cursor: pointer;
+        }
+
+        /* ターン数表示 */
+        .turn-counter {
+            font-size: 18px;
+            font-weight: bold;
+            color: var(--primary-color);
+            margin-bottom: 15px;
+            text-align: right;
+        }
+
+        /* タイプボタンのデザイン */
+        .type-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+            gap: 8px;
+            margin-bottom: 15px;
+        }
+
+        .type-btn {
+            border: none;
+            border-radius: 6px;
+            padding: 10px 5px;
+            font-size: 13px;
+            font-weight: bold;
+            color: white;
+            cursor: pointer;
+            transition: transform 0.1s, opacity 0.2s;
+            text-shadow: 1px 1px 1px rgba(0,0,0,0.3);
+            text-align: center;
+        }
+
+        .type-btn:hover {
+            opacity: 0.9;
+            transform: scale(1.03);
+        }
+
+        .type-btn:active {
+            transform: scale(0.97);
+        }
+
+        /* ポケモンのタイプ別カラー */
+        .type-normal { background-color: #A8A878; }
+        .type-fire { background-color: #F08030; }
+        .type-water { background-color: #6890F0; }
+        .type-grass { background-color: #78C850; }
+        .type-electric { background-color: #F8D030; color: #333; text-shadow: none; }
+        .type-ice { background-color: #98D8D8; color: #333; text-shadow: none; }
+        .type-fighting { background-color: #C03028; }
+        .type-poison { background-color: #A040A0; }
+        .type-ground { background-color: #E0C068; color: #333; text-shadow: none; }
+        .type-flying { background-color: #A890F0; }
+        .type-psychic { background-color: #F85888; }
+        .type-bug { background-color: #A8B820; }
+        .type-rock { background-color: #B8A038; }
+        .type-ghost { background-color: #705898; }
+        .type-dragon { background-color: #7038F8; }
+        .type-dark { background-color: #705848; }
+        .type-steel { background-color: #B8B8D0; color: #333; text-shadow: none; }
+        .type-fairy { background-color: #EE99AC; }
+
+        /* 解答エリア */
+        .guess-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .select-group {
+            display: flex;
+            gap: 10px;
+        }
+
+        .select-group select {
+            flex: 1;
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid #ccc;
+            font-size: 15px;
+        }
+
+        .submit-btn {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 12px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .submit-btn:hover {
+            background-color: #45a049;
+        }
+
+        /* 履歴・ログ */
+        .log-container {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .log-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .log-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 12px;
+            border-bottom: 1px solid #f0f0f0;
+            font-size: 14px;
+        }
+
+        .log-turn {
+            color: #888;
+            font-size: 12px;
+            width: 50px;
+        }
+
+        .log-action {
+            flex-grow: 1;
+            margin-right: 10px;
+        }
+
+        /* バッジ表示 */
+        .badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+            color: white;
+            text-align: center;
+            min-width: 50px;
+        }
+
+        .badge-4x { background-color: #d32f2f; }
+        .badge-2x { background-color: #f57c00; }
+        .badge-1x { background-color: #757575; }
+        .badge-half { background-color: #1976d2; }
+        .badge-quarter { background-color: #0288d1; }
+        .badge-immune { background-color: #37474f; }
+        .badge-correct { background-color: #388e3c; }
+        .badge-incorrect { background-color: #c62828; }
+
+        /* リセットボタン */
+        .reset-container {
+            text-align: center;
+            margin-top: 15px;
+        }
+
+        .reset-btn {
+            background-color: #e0e0e0;
+            color: #333;
+            border: none;
+            border-radius: 6px;
+            padding: 8px 16px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        .reset-btn:hover {
+            background-color: #d5d5d5;
+        }
+
+        /* モーダル表示 */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.6);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            text-align: center;
+            max-width: 400px;
+            width: 80%;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        }
+
+        .modal-content h3 {
+            margin-top: 0;
+            color: #4CAF50;
+            font-size: 22px;
+        }
+
+        .modal-content p {
+            font-size: 16px;
+            margin: 15px 0;
+        }
+
+        .modal-btn {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 10px 20px;
+            font-size: 15px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>ポケモン タイプ推測ゲーム</h1>
+    </header>
+
+    <div class="rules">
+        <strong>【ルール】</strong><br>
+        1. CPUがランダムにポケモンのタイプを1組選択しました。<br>
+        2. <strong>攻撃してヒントを得る:</strong> 攻撃タイプを選択すると、そのタイプでCPUを攻撃した際のダメージ倍率が表示されます。<br>
+        3. <strong>解答する:</strong> CPUのタイプが分かったら、タイプを選んで「解答」します。失敗してもペナルティはなく、何度でも解答し直せます。
+    </div>
+
+    <!-- ゲーム設定エリア -->
+    <div class="card">
+        <h2>ゲーム設定</h2>
+        <div class="settings-row">
+            <label for="game-mode"><strong>ゲームモード:</strong></label>
+            <select id="game-mode" onchange="initGame()">
+                <option value="all" selected>ランダム (単一・複合 / 複合確率90%)</option>
+                <option value="single">単一タイプ確定</option>
+                <option value="dual">複合タイプ確定</option>
+            </select>
+            <span style="font-size: 12px; color: #666;">※モードを変更すると、新しくゲームが開始されます。</span>
+        </div>
+    </div>
+
+    <div class="turn-counter">
+        経過ターン: <span id="turn-val">0</span>
+    </div>
+
+    <div class="game-layout">
+        <!-- 操作エリア -->
+        <div class="main-panel">
+            <!-- 攻撃パネル -->
+            <div class="card" id="attack-card">
+                <h2>1. 攻撃して倍率を調べる（1ターン消費）</h2>
+                <p style="font-size: 13px; color: #666; margin-top: 0;">攻撃側のタイプをクリックしてください。CPUに対する相性が履歴に表示されます。</p>
+                <div class="type-grid" id="attack-panel">
+                    <!-- JSでボタンを動的生成 -->
+                </div>
+            </div>
+
+            <!-- 解答パネル -->
+            <div class="card" id="guess-card">
+                <h2>2. CPUのタイプを当てる（1ターン消費）</h2>
+                <p style="font-size: 13px; color: #666; margin-top: 0;">CPUが持っているタイプを予想して解答します（複合タイプは順不同）。</p>
+                <div class="guess-controls">
+                    <div class="select-group">
+                        <select id="guess1">
+                            <!-- JSで選択肢を動的生成 -->
+                        </select>
+                        <select id="guess2">
+                            <option value="">（なし / 単一タイプ）</option>
+                            <!-- JSで選択肢を動的生成 -->
+                        </select>
+                    </div>
+                    <button class="submit-btn" id="submit-guess" onclick="checkAnswer()">解答を送信する</button>
+                </div>
+            </div>
+
+            <div class="reset-container">
+                <button class="reset-btn" onclick="initGame()">最初からやり直す</button>
+            </div>
+        </div>
+
+        <!-- 履歴エリア -->
+        <div class="sidebar-panel">
+            <div class="card">
+                <h2>これまでの履歴</h2>
+                <div class="log-container">
+                    <ul class="log-list" id="log-list">
+                        <!-- ここに履歴が追加されます -->
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- クリア時に表示されるモーダル -->
+<div class="modal" id="win-modal">
+    <div class="modal-content">
+        <h3>🎉 正解です！クリア！</h3>
+        <p id="win-message"></p>
+        <button class="modal-btn" onclick="closeModalAndRestart()">もう一度遊ぶ</button>
+    </div>
+</div>
+
+<script>
+    // ポケモンの全18タイプ
+    const types = [
+        "ノーマル", "ほのお", "みず", "くさ", "でんき", "こおり", "かくとう", "どく", "じめん",
+        "ひこう", "エスパー", "むし", "いわ", "ゴースト", "ドラゴン", "あく", "はがね", "フェアリー"
+    ];
+
+    // タイプ別のCSSクラスマッピング
+    const typeClassMap = {
+        "ノーマル": "type-normal", "ほのお": "type-fire", "みず": "type-water", "くさ": "type-grass",
+        "でんき": "type-electric", "こおり": "type-ice", "かくとう": "type-fighting", "どく": "type-poison",
+        "じめん": "type-ground", "ひこう": "type-flying", "エスパー": "type-psychic", "むし": "type-bug",
+        "いわ": "type-rock", "ゴースト": "type-ghost", "ドラゴン": "type-dragon", "あく": "type-dark",
+        "はがね": "type-steel", "フェアリー": "type-fairy"
+    };
+
+    // タイプ相性表
+    const relations = {
+        "ノーマル": { "いわ": 0.5, "ゴースト": 0, "はがね": 0.5 },
+        "ほのお": { "ほのお": 0.5, "みず": 0.5, "くさ": 2, "こおり": 2, "むし": 2, "いわ": 0.5, "ドラゴン": 0.5, "はがね": 2 },
+        "みず": { "ほのお": 2, "みず": 0.5, "くさ": 0.5, "じめん": 2, "いわ": 2, "ドラゴン": 0.5 },
+        "でんき": { "みず": 2, "くさ": 0.5, "でんき": 0.5, "じめん": 0, "ひこう": 2, "ドラゴン": 0.5 },
+        "くさ": { "ほのお": 0.5, "みず": 2, "くさ": 0.5, "どく": 0.5, "じめん": 2, "ひこう": 0.5, "むし": 0.5, "いわ": 2, "ドラゴン": 0.5, "はがね": 0.5 },
+        "こおり": { "ほのお": 0.5, "みず": 0.5, "くさ": 2, "こおり": 0.5, "じめん": 2, "ひこう": 2, "ドラゴン": 2, "はがね": 0.5 },
+        "かくとう": { "ノーマル": 2, "こおり": 2, "どく": 0.5, "ひこう": 0.5, "エスパー": 0.5, "むし": 0.5, "いわ": 2, "ゴースト": 0, "あく": 2, "はがね": 2, "フェアリー": 0.5 },
+        "どく": { "くさ": 2, "どく": 0.5, "じめん": 0.5, "いわ": 0.5, "ゴースト": 0.5, "はがね": 0, "フェアリー": 2 },
+        "じめん": { "ほのお": 2, "でんき": 2, "くさ": 0.5, "どく": 2, "ひこう": 0, "むし": 0.5, "いわ": 2, "はがね": 2 },
+        "ひこう": { "でんき": 0.5, "くさ": 2, "かくとう": 2, "むし": 2, "いわ": 0.5, "はがね": 0.5 },
+        "エスパー": { "かくとう": 2, "どく": 2, "エスパー": 0.5, "あく": 0, "はがね": 0.5 },
+        "むし": { "ほのお": 0.5, "くさ": 2, "かくとう": 0.5, "どく": 0.5, "ひこう": 0.5, "エスパー": 2, "ゴースト": 0.5, "あく": 2, "はがね": 0.5, "フェアリー": 0.5 },
+        "いわ": { "ほのお": 2, "こおり": 2, "かくとう": 0.5, "じめん": 0.5, "ひこう": 2, "むし": 2, "はがね": 0.5 },
+        "ゴースト": { "ノーマル": 0, "エスパー": 2, "ゴースト": 2, "あく": 0.5 },
+        "ドラゴン": { "ドラゴン": 2, "はがね": 0.5, "フェアリー": 0 },
+        "あく": { "かくとう": 0.5, "エスパー": 2, "ゴースト": 2, "あく": 0.5, "フェアリー": 0.5 },
+        "はがね": { "みず": 0.5, "でんき": 0.5, "こおり": 2, "いわ": 2, "はがね": 0.5, "フェアリー": 2, "ほのお": 0.5 },
+        "フェアリー": { "ほのお": 0.5, "かくとう": 2, "どく": 0.5, "ドラゴン": 2, "あく": 2, "はがね": 0.5 }
+    };
+
+    // ゲーム用変数
+    let cpuTypes = [];
+    let turns = 0;
+
+    window.onload = function() {
+        createUIElements();
+        initGame();
+    };
+
+    function createUIElements() {
+        const attackPanel = document.getElementById("attack-panel");
+        attackPanel.innerHTML = "";
+        types.forEach(type => {
+            const btn = document.createElement("button");
+            btn.className = `type-btn ${typeClassMap[type]}`;
+            btn.textContent = type;
+            btn.onclick = () => attack(type);
+            attackPanel.appendChild(btn);
+        });
+
+        const guess1 = document.getElementById("guess1");
+        const guess2 = document.getElementById("guess2");
+
+        guess1.innerHTML = '<option value="" disabled selected>タイプを選択...</option>';
+        guess2.innerHTML = '<option value="">（なし / 単一タイプ）</option>';
+
+        types.forEach(type => {
+            const opt1 = document.createElement("option");
+            opt1.value = type;
+            opt1.textContent = type;
+            guess1.appendChild(opt1);
+
+            const opt2 = document.createElement("option");
+            opt2.value = type;
+            opt2.textContent = type;
+            guess2.appendChild(opt2);
+        });
+    }
+
+    function initGame() {
+        turns = 0;
+        updateTurnDisplay();
+        document.getElementById("log-list").innerHTML = "";
+        enableControls();
+
+        // 選択されたゲームモードを取得
+        const mode = document.getElementById("game-mode").value;
+        let isDual = false;
+
+        if (mode === "single") {
+            isDual = false;
+        } else if (mode === "dual") {
+            isDual = true;
+        } else {
+            // ランダム設定時は、「90%」の確率で複合タイプにする
+            isDual = Math.random() < 0.90;
+        }
+
+        if (isDual) {
+            const idx1 = Math.floor(Math.random() * types.length);
+            let idx2 = Math.floor(Math.random() * types.length);
+            while (idx2 === idx1) {
+                idx2 = Math.floor(Math.random() * types.length);
+            }
+            cpuTypes = [types[idx1], types[idx2]].sort(); // 内部でソートして保持
+        } else {
+            const idx = Math.floor(Math.random() * types.length);
+            cpuTypes = [types[idx]];
+        }
+
+        // デバッグ用（何が選ばれているか確認したい場合は下記コメントアウトを外してください）
+        // console.log("CPU selected types:", cpuTypes);
+    }
+
+    function updateTurnDisplay() {
+        document.getElementById("turn-val").textContent = turns;
+    }
+
+    function getEffectiveness(attacker, defenderTypes) {
+        let multiplier = 1.0;
+        for (let def of defenderTypes) {
+            let mult = 1.0;
+            if (relations[attacker] && relations[attacker][def] !== undefined) {
+                mult = relations[attacker][def];
+            }
+            multiplier *= mult;
+        }
+        return multiplier;
+    }
+
+    function getEffectivenessString(multiplier) {
+        if (multiplier === 4.0) return "4倍";
+        if (multiplier === 2.0) return "2倍";
+        if (multiplier === 1.0) return "等倍";
+        if (multiplier === 0.5) return "半減";
+        if (multiplier === 0.25) return "1/4";
+        if (multiplier === 0.0) return "無効";
+        return multiplier + "倍";
+    }
+
+    function attack(type) {
+        turns++;
+        const mult = getEffectiveness(type, cpuTypes);
+        const resultStr = getEffectivenessString(mult);
+
+        addLog(turns, `【攻撃】${type}タイプ`, `効果は「${resultStr}」`, null, mult);
+        updateTurnDisplay();
+    }
+
+    function checkAnswer() {
+        const val1 = document.getElementById("guess1").value;
+        const val2 = document.getElementById("guess2").value;
+
+        if (!val1) {
+            alert("1つ目のタイプは必ず選択してください。");
+            return;
+        }
+
+        let guessTypes = [];
+        guessTypes.push(val1);
+
+        if (val2 && val2 !== "") {
+            if (val1 === val2) {
+                alert("同じタイプを2つ選ぶことはできません。単一タイプの場合は2つ目を「なし」にしてください。");
+                return;
+            }
+            guessTypes.push(val2);
+        }
+
+        turns++;
+
+        // 正誤判定用のソート
+        const sortedCpu = [...cpuTypes].sort();
+        const sortedGuess = [...guessTypes].sort();
+
+        const isCorrect = sortedCpu.length === sortedGuess.length &&
+                          sortedCpu.every((val, index) => val === sortedGuess[index]);
+
+        if (isCorrect) {
+            addLog(turns, `【解答】${guessTypes.join(' / ')}`, "正解！🎉", true);
+            showWinModal();
+        } else {
+            addLog(turns, `【解答】${guessTypes.join(' / ')}`, "不正解❌", false);
+            alert("不正解です！諦めずに考えてみましょう。");
+            updateTurnDisplay();
+        }
+    }
+
+    function addLog(turn, action, result, isCorrect, multiplier) {
+        const logList = document.getElementById("log-list");
+        const li = document.createElement("li");
+        li.className = "log-item";
+
+        let badgeClass = "badge-1x";
+        if (multiplier === 4.0) badgeClass = "badge-4x";
+        else if (multiplier === 2.0) badgeClass = "badge-2x";
+        else if (multiplier === 0.5) badgeClass = "badge-half";
+        else if (multiplier === 0.25) badgeClass = "badge-quarter";
+        else if (multiplier === 0.0) badgeClass = "badge-immune";
+
+        if (isCorrect === true) badgeClass = "badge-correct";
+        else if (isCorrect === false) badgeClass = "badge-incorrect";
+
+        li.innerHTML = `
+            <span class="log-turn">Turn ${turn}</span>
+            <span class="log-action">${action}</span>
+            <span class="badge ${badgeClass}">${result}</span>
+        `;
+
+        logList.insertBefore(li, logList.firstChild);
+    }
+
+    function disableControls() {
+        document.querySelectorAll("#attack-panel button").forEach(btn => btn.disabled = true);
+        document.getElementById("submit-guess").disabled = true;
+    }
+
+    function enableControls() {
+        document.querySelectorAll("#attack-panel button").forEach(btn => btn.disabled = false);
+        document.getElementById("submit-guess").disabled = false;
+        document.getElementById("guess1").selectedIndex = 0;
+        document.getElementById("guess2").selectedIndex = 0;
+    }
+
+    function showWinModal() {
+        const message = document.getElementById("win-message");
+        message.innerHTML = `
+            CPUが選んでいたタイプは<br>
+            <strong>「${cpuTypes.join(' / ')}」</strong>でした！<br><br>
+            クリアにかかったターン数: <strong>${turns} ターン</strong>
+        `;
+        document.getElementById("win-modal").style.display = "flex";
+        disableControls();
+    }
+
+    function closeModalAndRestart() {
+        document.getElementById("win-modal").style.display = "none";
+        initGame();
+    }
+</script>
+
+</body>
+</html>
