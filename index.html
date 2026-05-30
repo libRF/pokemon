@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ポケモン タイプ推測ゲーム</title>
+    <title>ポケモン タイプ推測ゲーム (バグ修正版)</title>
     <style>
         :root {
             --primary-color: #3f51b5;
@@ -448,6 +448,9 @@
         
         isGuessMode = false;
         selectedGuessTypes = [];
+
+        // 【バッジ修正部分】前回のクリア時に無効化された「解答する」ボタンを再有効化
+        document.getElementById("go-to-guess-btn").disabled = false;
 
         // 選択されたゲームモードを取得
         const mode = document.getElementById("game-mode").value;
