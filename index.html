@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ポケモン タイプ推測ゲーム (改良版)</title>
+    <title>ポケモン タイプ推測ゲーム</title>
     <style>
         :root {
             --primary-color: #3f51b5;
@@ -132,6 +132,18 @@
             transform: scale(0.97);
         }
 
+        /* 解答選択時のハイライト/半透明 */
+        .type-btn.selected {
+            outline: 3px solid #333;
+            outline-offset: 2px;
+            transform: scale(1.05);
+            opacity: 1 !important;
+            z-index: 2;
+        }
+        .type-btn.not-selected-in-guess {
+            opacity: 0.4;
+        }
+
         /* ポケモンのタイプ別カラー */
         .type-normal { background-color: #A8A878; }
         .type-fire { background-color: #F08030; }
@@ -152,40 +164,19 @@
         .type-steel { background-color: #B8B8D0; color: #333; text-shadow: none; }
         .type-fairy { background-color: #EE99AC; }
 
-        /* 解答エリア */
-        .guess-controls {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-        }
-
-        .select-group {
-            display: flex;
-            gap: 10px;
-        }
-
-        .select-group select {
-            flex: 1;
-            padding: 10px;
-            border-radius: 6px;
-            border: 1px solid #ccc;
-            font-size: 15px;
-        }
-
-        .submit-btn {
-            background-color: #4CAF50;
-            color: white;
+        /* アクションボタン（最下部） */
+        .action-btn {
+            width: 100%;
             border: none;
             border-radius: 6px;
             padding: 12px;
             font-size: 16px;
             font-weight: bold;
             cursor: pointer;
-            transition: background-color 0.2s;
+            transition: background-color 0.2s, transform 0.1s;
         }
-
-        .submit-btn:hover {
-            background-color: #45a049;
+        .action-btn:active {
+            transform: scale(0.98);
         }
 
         /* 履歴・ログ */
@@ -318,7 +309,7 @@
         <strong>【ルール】</strong><br>
         1. CPUがランダムにポケモンのタイプを1組選択しました。<br>
         2. <strong>攻撃してヒントを得る:</strong> 攻撃タイプを選択すると、そのタイプでCPUを攻撃した際のダメージ倍率が表示されます。<br>
-        3. <strong>解答する:</strong> CPUのタイプが分かったら、タイプを選んで「解答」します。失敗してもペナルティはなく、何度でも解答し直せます。
+        3. <strong>解答する:</strong> 下の「解答する」ボタンを押すと解答モードに切り替わります。予想タイプを選択して送信してください。
     </div>
 
     <!-- ゲーム設定エリア -->
@@ -327,7 +318,7 @@
         <div class="settings-row">
             <label for="game-mode"><strong>ゲームモード:</strong></label>
             <select id="game-mode" onchange="initGame()">
-                <option value="all" selected>ランダム (単一・複合 / 複合確率90%)</option>
+                <option value="all" selected>ランダム (単一・複合 / 複合確率80%)</option>
                 <option value="single">単一タイプ確定</option>
                 <option value="dual">複合タイプ確定</option>
             </select>
@@ -342,30 +333,34 @@
     <div class="game-layout">
         <!-- 操作エリア -->
         <div class="main-panel">
-            <!-- 攻撃パネル -->
-            <div class="card" id="attack-card">
-                <h2>1. 攻撃して倍率を調べる（1ターン消費）</h2>
-                <p style="font-size: 13px; color: #666; margin-top: 0;">攻撃側のタイプをクリックしてください。CPUに対する相性が履歴に表示されます。</p>
-                <div class="type-grid" id="attack-panel">
+            <!-- 攻撃／解答パネル -->
+            <div class="card" id="action-card">
+                <h2 id="action-title">1. 攻撃して倍率を調べる（1ターン消費）</h2>
+                <p id="action-desc" style="font-size: 13px; color: #666; margin-top: 0;">攻撃側のタイプをクリックしてください。CPUに対する相性が履歴に表示されます。</p>
+                
+                <!-- タイプボタン18個 -->
+                <div class="type-grid" id="type-grid">
                     <!-- JSでボタンを動的生成 -->
                 </div>
-            </div>
 
-            <!-- 解答パネル -->
-            <div class="card" id="guess-card">
-                <h2>2. CPUのタイプを当てる（1ターン消費）</h2>
-                <p style="font-size: 13px; color: #666; margin-top: 0;">CPUが持っているタイプを予想して解答します（複合タイプは順不同）。</p>
-                <div class="guess-controls">
-                    <div class="select-group">
-                        <select id="guess1">
-                            <!-- JSで選択肢を動的生成 -->
-                        </select>
-                        <select id="guess2">
-                            <option value="">（なし / 単一タイプ）</option>
-                            <!-- JSで選択肢を動的生成 -->
-                        </select>
+                <!-- 選択したタイプを表示するエリア（解答モード中のみ表示） -->
+                <div id="guess-display-container" style="display: none; margin: 20px 0 15px 0; text-align: center; border-top: 1px dashed #ccc; padding-top: 15px;">
+                    <div style="font-size: 14px; font-weight: bold; margin-bottom: 8px;">選択中の予想タイプ（最大2つまで選択可能）:</div>
+                    <div id="selected-types-list" style="display: flex; gap: 10px; justify-content: center; min-height: 35px; align-items: center;">
+                        <!-- ここに選択したバッジが表示されます -->
                     </div>
-                    <button class="submit-btn" id="submit-guess" onclick="checkAnswer()">解答を送信する</button>
+                </div>
+
+                <!-- 操作ボタン群 -->
+                <div style="margin-top: 15px;">
+                    <!-- 通常モード用ボタン -->
+                    <button class="action-btn" id="go-to-guess-btn" onclick="enterGuessMode()" style="background-color: #ff9800; color: white;">解答する</button>
+                    
+                    <!-- 解答モード用ボタン -->
+                    <div id="guess-actions-container" style="display: none; display: flex; gap: 10px;">
+                        <button class="action-btn" id="submit-guess-btn" onclick="submitGuess()" style="background-color: #4CAF50; color: white; flex: 2;">解答を送信する</button>
+                        <button class="action-btn" id="cancel-guess-btn" onclick="exitGuessMode()" style="background-color: #757575; color: white; flex: 1;">キャンセル</button>
+                    </div>
                 </div>
             </div>
 
@@ -438,47 +433,21 @@
     // ゲーム用変数
     let cpuTypes = [];
     let turns = 0;
+    let isGuessMode = false;      // 現在解答モードかどうか
+    let selectedGuessTypes = []; // 解答用として選択中のタイプ
 
     window.onload = function() {
-        createUIElements();
         initGame();
     };
 
-    function createUIElements() {
-        const attackPanel = document.getElementById("attack-panel");
-        attackPanel.innerHTML = "";
-        types.forEach(type => {
-            const btn = document.createElement("button");
-            btn.className = `type-btn ${typeClassMap[type]}`;
-            btn.textContent = type;
-            btn.onclick = () => attack(type);
-            attackPanel.appendChild(btn);
-        });
-
-        const guess1 = document.getElementById("guess1");
-        const guess2 = document.getElementById("guess2");
-
-        guess1.innerHTML = '<option value="" disabled selected>タイプを選択...</option>';
-        guess2.innerHTML = '<option value="">（なし / 単一タイプ）</option>';
-
-        types.forEach(type => {
-            const opt1 = document.createElement("option");
-            opt1.value = type;
-            opt1.textContent = type;
-            guess1.appendChild(opt1);
-
-            const opt2 = document.createElement("option");
-            opt2.value = type;
-            opt2.textContent = type;
-            guess2.appendChild(opt2);
-        });
-    }
-
+    // ゲームの初期化・再スタート
     function initGame() {
         turns = 0;
         updateTurnDisplay();
         document.getElementById("log-list").innerHTML = "";
-        enableControls();
+        
+        isGuessMode = false;
+        selectedGuessTypes = [];
 
         // 選択されたゲームモードを取得
         const mode = document.getElementById("game-mode").value;
@@ -489,8 +458,8 @@
         } else if (mode === "dual") {
             isDual = true;
         } else {
-            // ランダム設定時は、「90%」の確率で複合タイプにする
-            isDual = Math.random() < 0.90;
+            // ランダムモードの複合率を「80%」に引き上げ
+            isDual = Math.random() < 0.80;
         }
 
         if (isDual) {
@@ -505,8 +474,128 @@
             cpuTypes = [types[idx]];
         }
 
-        // デバッグ用（何が選ばれているか確認したい場合は下記コメントアウトを外してください）
+        // 描画を更新
+        updateUI();
+
+        // デバッグ用（答え合わせを行いたい場合は下記コメントアウトを外してください）
         // console.log("CPU selected types:", cpuTypes);
+    }
+
+    // 画面レイアウトの構築・更新
+    function updateUI() {
+        // 1. タイプグリッドの更新
+        const typeGrid = document.getElementById("type-grid");
+        typeGrid.innerHTML = "";
+
+        types.forEach(type => {
+            const btn = document.createElement("button");
+            btn.className = `type-btn ${typeClassMap[type]}`;
+            btn.textContent = type;
+
+            if (!isGuessMode) {
+                // 通常時：攻撃
+                btn.onclick = () => attack(type);
+            } else {
+                // 解答モード時：選択/解除
+                const isSelected = selectedGuessTypes.includes(type);
+                if (isSelected) {
+                    btn.classList.add("selected");
+                } else if (selectedGuessTypes.length > 0) {
+                    btn.classList.add("not-selected-in-guess");
+                }
+                btn.onclick = () => toggleSelectType(type);
+            }
+            typeGrid.appendChild(btn);
+        });
+
+        // 2. テキストとボタン類の表示切り替え
+        const actionTitle = document.getElementById("action-title");
+        const actionDesc = document.getElementById("action-desc");
+        const displayContainer = document.getElementById("guess-display-container");
+        const goToGuessBtn = document.getElementById("go-to-guess-btn");
+        const guessActions = document.getElementById("guess-actions-container");
+
+        if (!isGuessMode) {
+            actionTitle.textContent = "1. 攻撃して倍率を調べる（1ターン消費）";
+            actionDesc.textContent = "攻撃側のタイプをクリックしてください。CPUに対する相性が履歴に表示されます。";
+            
+            displayContainer.style.display = "none";
+            goToGuessBtn.style.display = "block";
+            guessActions.style.display = "none";
+        } else {
+            actionTitle.textContent = "2. 解答タイプを選択する";
+            actionDesc.textContent = "CPUのタイプを予想して、以下のボタンから1つ、または2つ選択してください（もう一度押すと解除）。";
+            
+            displayContainer.style.display = "block";
+            goToGuessBtn.style.display = "none";
+            guessActions.style.display = "flex";
+
+            renderSelectedTypesDisplay();
+        }
+    }
+
+    // 解答モードへ切り替え
+    function enterGuessMode() {
+        isGuessMode = true;
+        selectedGuessTypes = [];
+        updateUI();
+    }
+
+    // 通常（攻撃）モードへ切り替え
+    function exitGuessMode() {
+        isGuessMode = false;
+        selectedGuessTypes = [];
+        updateUI();
+    }
+
+    // 解答モード時のタイプ選択処理
+    function toggleSelectType(type) {
+        const index = selectedGuessTypes.indexOf(type);
+        if (index > -1) {
+            // すでに選ばれていれば解除
+            selectedGuessTypes.splice(index, 1);
+        } else {
+            // まだ選ばれていなければ追加（上限2個まで）
+            if (selectedGuessTypes.length < 2) {
+                selectedGuessTypes.push(type);
+            } else {
+                alert("選択できるタイプは最大2つまでです。別のタイプを選ぶ場合は、選んであるタイプをクリックして先に解除してください。");
+            }
+        }
+        updateUI();
+    }
+
+    // 選択中の予想タイプをバッジ形式で描画
+    function renderSelectedTypesDisplay() {
+        const listContainer = document.getElementById("selected-types-list");
+        listContainer.innerHTML = "";
+
+        if (selectedGuessTypes.length === 0) {
+            const placeholder = document.createElement("span");
+            placeholder.textContent = "（タイプが選択されていません）";
+            placeholder.style.color = "#888";
+            placeholder.style.fontSize = "14px";
+            listContainer.appendChild(placeholder);
+            return;
+        }
+
+        selectedGuessTypes.forEach(type => {
+            const badge = document.createElement("span");
+            badge.className = `badge ${typeClassMap[type]}`;
+            badge.style.fontSize = "14px";
+            badge.style.padding = "6px 12px";
+            badge.style.borderRadius = "6px";
+            badge.style.textShadow = "1px 1px 1px rgba(0,0,0,0.3)";
+            
+            if (["でんき", "こおり", "じめん", "はがね"].includes(type)) {
+                badge.style.color = "#333";
+                badge.style.textShadow = "none";
+            } else {
+                badge.style.color = "white";
+            }
+            badge.textContent = type;
+            listContainer.appendChild(badge);
+        });
     }
 
     function updateTurnDisplay() {
@@ -535,6 +624,7 @@
         return multiplier + "倍";
     }
 
+    // 通常時の攻撃処理（ヒントを得る）
     function attack(type) {
         turns++;
         const mult = getEffectiveness(type, cpuTypes);
@@ -544,42 +634,32 @@
         updateTurnDisplay();
     }
 
-    function checkAnswer() {
-        const val1 = document.getElementById("guess1").value;
-        const val2 = document.getElementById("guess2").value;
-
-        if (!val1) {
-            alert("1つ目のタイプは必ず選択してください。");
+    // 解答を送信する
+    function submitGuess() {
+        if (selectedGuessTypes.length === 0) {
+            alert("予想するタイプを少なくとも1つ選択してください。");
             return;
-        }
-
-        let guessTypes = [];
-        guessTypes.push(val1);
-
-        if (val2 && val2 !== "") {
-            if (val1 === val2) {
-                alert("同じタイプを2つ選ぶことはできません。単一タイプの場合は2つ目を「なし」にしてください。");
-                return;
-            }
-            guessTypes.push(val2);
         }
 
         turns++;
 
-        // 正誤判定用のソート
+        // 正誤判定（配列をソートして比較）
         const sortedCpu = [...cpuTypes].sort();
-        const sortedGuess = [...guessTypes].sort();
+        const sortedGuess = [...selectedGuessTypes].sort();
 
         const isCorrect = sortedCpu.length === sortedGuess.length &&
                           sortedCpu.every((val, index) => val === sortedGuess[index]);
 
         if (isCorrect) {
-            addLog(turns, `【解答】${guessTypes.join(' / ')}`, "正解！🎉", true);
+            addLog(turns, `【解答】${selectedGuessTypes.join(' / ')}`, "正解！🎉", true);
             showWinModal();
         } else {
-            addLog(turns, `【解答】${guessTypes.join(' / ')}`, "不正解❌", false);
-            alert("不正解です！諦めずに考えてみましょう。");
+            addLog(turns, `【解答】${selectedGuessTypes.join(' / ')}`, "不正解❌", false);
+            alert("不正解です！再度攻撃してヒントをさらに集めましょう。");
             updateTurnDisplay();
+            
+            // 不正解の場合は自動的に攻撃（通常）モードのレイアウトに戻る
+            exitGuessMode();
         }
     }
 
@@ -608,15 +688,8 @@
     }
 
     function disableControls() {
-        document.querySelectorAll("#attack-panel button").forEach(btn => btn.disabled = true);
-        document.getElementById("submit-guess").disabled = true;
-    }
-
-    function enableControls() {
-        document.querySelectorAll("#attack-panel button").forEach(btn => btn.disabled = false);
-        document.getElementById("submit-guess").disabled = false;
-        document.getElementById("guess1").selectedIndex = 0;
-        document.getElementById("guess2").selectedIndex = 0;
+        document.querySelectorAll("#type-grid button").forEach(btn => btn.disabled = true);
+        document.getElementById("go-to-guess-btn").disabled = true;
     }
 
     function showWinModal() {
